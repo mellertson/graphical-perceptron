@@ -99,7 +99,8 @@ class BackPropagation(LearningFunctionBase):
 
 		# TODO: adjust weights of hidden layer neurons
 		elif connection.forward.n_type == 'hidden':
-			pass
+			for forward_connection in connection.backward.connections['outputs']:
+
 
 
 class Window(ABC):
@@ -164,7 +165,7 @@ class Connection(object):
 		The neuron the connection feeds forward to
 	:type forward: Neuron
 	:ivar backward:
-		The neuron the connection back-propogates to
+		The neuron the connection back-propagates to
 	:type backward: Neuron
 	:ivar weight:
 		The connections weight factor
