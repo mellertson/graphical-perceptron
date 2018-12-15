@@ -1,0 +1,4 @@
+graphics.py==5.0.1
+graphics.py-extra=0.2.0
+trianglesolver==1.1
+

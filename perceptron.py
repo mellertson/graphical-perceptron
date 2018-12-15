@@ -25,6 +25,83 @@ class SigmoidActivation(ActivationFunctionBase):
 		return 1 / (1 + e^-input_value)
 
 
+class ErrorFunctionBase(ABC):
+
+	@classmethod
+	@abstractmethod
+	def error_fn(cls, target, output):
+		"""
+		Calculate the error of the output value with respect to the target value
+
+		:param target:
+		:type target: float | int
+		:param output:
+		:type output: float | int
+
+		:rtype: float
+		"""
+
+
+class OutputError(ErrorFunctionBase):
+
+	@classmethod
+	def error_fn(cls, target, output):
+		return (target - output) * output * (1 - output)
+
+
+class HiddenError(ErrorFunctionBase):
+
+	@classmethod
+	def error_fn(cls, target, output):
+		return output * (1 - output) *
+
+
+class LearningFunctionBase(ABC):
+
+	@classmethod
+	@abstractmethod
+	def learn_fn(cls, connection, learning_rate, error_base):
+		"""
+		Abstract method for a learning function used in a neural network
+
+		:param connection: a connection between two neurons
+		:type connection: Connection
+		:param learning_rate:
+		:type learning_rate: float
+		:param error_base:
+		:type error_base: ErrorFunctionBase
+
+		:return: the updated weight of the given connection
+		:rtype: Connection
+		"""
+
+
+class BackPropagation(LearningFunctionBase):
+
+	@classmethod
+	def learn_fn(cls, connection, learning_rate, error_base):
+		"""
+		Perform back-propagation on the connection at the given learning rate
+
+		:param connection: a connection between two neurons
+		:type connection: Connection
+		:param learning_rate:
+		:type learning_rate: float
+		:param error_base:
+		:type error_base: ErrorFunctionBase
+
+		:return: the updated weight of the given connection
+		:rtype: Connection
+		"""
+		# adjust weights of output layer neurons
+		if connection.forward.n_type == 'output':
+			connection.weight += learning_rate * connection.forward.error * connection.backward.output
+
+		# TODO: adjust weights of hidden layer neurons
+		elif connection.forward.n_type == 'hidden':
+			pass
+
+
 class Window(ABC):
 
 	background = 'grey'
@@ -105,19 +182,18 @@ class Connection(object):
 		self.backward = backward
 		self.output_value = 1
 
-	def predict(self, input_value, biase, activation_base):
+	def predict(self, input_value, biase):
 		"""
 
 		:param input_value:
 		:type input_value: float | int
 		:param biase:
 		:type biase: float
-		:param activation_base:
-		:type activation_base: ActivationFunctionBase
 
-		:rtype: None
+		:rtype: float
 		"""
-		self.output_value = activation_base.activation_fn(input_value * self.weight * biase)
+		self.output_value = input_value * self.weight * biase
+		return self.output_value
 
 
 class Neuron(object):
@@ -129,10 +205,10 @@ class Neuron(object):
 	:type n_type: str
 	:ivar biase:
 	:type biase: float
-	:ivar activation_fn:
+	:ivar activation_base:
 		The neuron's activation function, for example:
 		step_wise(), sigmoid(), or gaussian()
-	:type activation_fn: callable
+	:type activation_base: ActivationFunctionBase
 	:ivar error_fn:
 		The neuron's error function used during training, for example:
 		mse(), or squared_error()
@@ -144,15 +220,19 @@ class Neuron(object):
 			'outputs': [],
 		}
 	:type connections: dict
+	:ivar output: the last output value of the neuron
+	:type output: float
+	:ivar error: the error of the last output value
+	:type error: float
 	"""
 
-	def __init__(self, n_type, biase, activation_fn, error_fn, connections=None):
+	def __init__(self, n_type, biase, activation_base, error_fn, connections=None):
 		self.n_type = n_type
 		if n_type == 'input':
 			self.biase = 1
 		else:
 			self.biase = biase
-		self.activation_fn = activation_fn
+		self.activation_base = activation_base
 		self.error_fn = error_fn
 		if isinstance(connections, dict):
 			if 'inputs' in connections and 'outputs' in connections:
@@ -162,12 +242,16 @@ class Neuron(object):
 		else:
 			self.connections = {'inputs': [], 'outputs': []}
 		self.input_value = 1
+		self.output = 1
+		self.error = 0
 
 	def predict(self, input_value=None):
 		if input_value:
 			self.input_value = input_value
+		o = 0
 		for output_connection in self.connections['outputs']:
-			output_connection.predict(input_value, self.biase, self.activation_fn)
+			o += output_connection.predict(input_value, self.biase)
+		return self.activation_base.activation_fn(o)
 
 
 class PerceptronModel(ModelBase):
